@@ -1,10 +1,10 @@
-
-
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-TOKEN =  8734453675:AAEPGVttKHUnxqJtaG0psN1jOXk2I68Z2k0
+TOKEN = os.environ.get("BOT_TOKEN")
+PORT = int(os.environ.get("PORT", 8080))
+RAILWAY_URL = os.environ.get("RAILWAY_STATIC_URL")
 
 subjects = [
     "Biochemistry",
@@ -27,8 +27,8 @@ async def subject_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     subject = query.data
 
     keyboard = [
-        [InlineKeyboardButton("📖 Online Sheets", callback_data=f"{subject}_online")],
-        [InlineKeyboardButton("🏫 Offline Sheets", callback_data=f"{subject}_offline")],
+        [InlineKeyboardButton("📖 Online Sheets", callback_data="online")],
+        [InlineKeyboardButton("🏫 Offline Sheets", callback_data="offline")],
         [InlineKeyboardButton("🔙 Back", callback_data="back")]
     ]
 
@@ -38,10 +38,18 @@ async def subject_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def back_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    await start(update, context)
+    keyboard = [[InlineKeyboardButton(sub, callback_data=sub)] for sub in subjects]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text("📚 اختر المادة:", reply_markup=reply_markup)
 
 app = ApplicationBuilder().token(TOKEN).build()
+
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CallbackQueryHandler(subject_handler))
 app.add_handler(CallbackQueryHandler(back_handler, pattern="back"))
-app.run_polling()
+app.add_handler(CallbackQueryHandler(subject_handler))
+
+app.run_webhook(
+    listen="0.0.0.0",
+    port=PORT,
+    webhook_url=f"https://{RAILWAY_URL}"
+)
